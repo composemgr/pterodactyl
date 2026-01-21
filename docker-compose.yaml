@@ -1,0 +1,50 @@
+# nginx proxy address - http://172.17.0.1:8095
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "5m"
+    max-file: "1"
+
+services:
+  pterodactyl:
+    image: ghcr.io/pterodactyl/panel:latest
+    container_name: pterodactyl-app
+    restart: unless-stopped
+    logging: *default-logging
+    networks:
+      - pterodactyl
+    ports:
+      - "8095:80"
+    environment:
+      TZ: ${TZ:-America/New_York}
+    volumes:
+      - ./rootfs/data/pterodactyl:/data
+      - ./rootfs/config/pterodactyl:/config
+    depends_on:
+      - pterodactyl-db
+
+  pterodactyl-db:
+    image: mariadb:11
+    container_name: pterodactyl-db
+    restart: unless-stopped
+    logging: *default-logging
+    networks:
+      - pterodactyl
+    environment:
+      TZ: ${TZ:-America/New_York}
+      MARIADB_DATABASE: ${DB_CREATE_DATABASE_NAME:-pterodactyl}
+      MARIADB_USER: ${DB_USER_NAME:-pterodactyl}
+      MARIADB_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
+      MARIADB_ROOT_PASSWORD: ${DB_ADMIN_PASS:-changeme_root_password}
+    volumes:
+      - ./rootfs/db/mariadb/pterodactyl:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  pterodactyl:
+    external: false

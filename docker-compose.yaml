@@ -19,8 +19,8 @@ services:
     environment:
       TZ: ${TZ:-America/New_York}
     volumes:
-      - ./rootfs/data/pterodactyl:/data
-      - ./rootfs/config/pterodactyl:/config
+      - ./volumes/data/pterodactyl:/data
+      - ./volumes/config/pterodactyl:/config
     depends_on:
       - pterodactyl-db
 
@@ -38,7 +38,7 @@ services:
       MARIADB_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
       MARIADB_ROOT_PASSWORD: ${DB_ADMIN_PASS:-changeme_root_password}
     volumes:
-      - ./rootfs/data/db/mariadb/pterodactyl:/var/lib/mysql
+      - ./volumes/data/db/mariadb/pterodactyl:/var/lib/mysql
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 30s

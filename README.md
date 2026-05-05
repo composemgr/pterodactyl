@@ -50,9 +50,9 @@ See `docker-compose.yaml` for complete list of configurable options.
 
 ## 📂 Volumes
 
-- `./rootfs/data/pterodactyl` - Data storage
-- `./rootfs/config/pterodactyl` - Data storage
-- `./rootfs/data/db/mariadb/pterodactyl` - Data storage
+- `./volumes/data/pterodactyl` - Data storage
+- `./volumes/config/pterodactyl` - Data storage
+- `./volumes/data/db/mariadb/pterodactyl` - Data storage
 
 ## 🔐 Security
 

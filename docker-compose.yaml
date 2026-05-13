@@ -17,6 +17,8 @@ services:
     logging: *default-logging
     networks:
       - pterodactyl
+      - proxy
+      - cloudflare
     ports:
       - "172.17.0.1:8095:80"
     environment:
@@ -39,10 +41,12 @@ services:
       MAIL_DRIVER: ${EMAIL_DRIVER:-log}
       MAIL_HOST: ${EMAIL_SERVER_HOST:-localhost}
       MAIL_PORT: ${EMAIL_SERVER_PORT:-587}
-      MAIL_USERNAME: ${EMAIL_SERVER_USER:-""}
-      MAIL_PASSWORD: ${EMAIL_SERVER_PASS:-""}
+      MAIL_USERNAME: ${EMAIL_SERVER_LOGIN_NAME:-""}
+      MAIL_PASSWORD: ${EMAIL_SERVER_LOGIN_PASS:-""}
       MAIL_FROM: ${EMAIL_SERVER_MAIL_FROM:-noreply@example.com}
       MAIL_ENCRYPTION: ${EMAIL_ENCRYPTION:-tls}
+      CONTAINER_NAME: pterodactyl-app
+      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
     volumes:
       - ./volumes/data/pterodactyl:/app/var/
       - ./volumes/config/pterodactyl:/etc/nginx/conf.d/
@@ -51,6 +55,22 @@ services:
         condition: service_healthy
       pterodactyl-redis:
         condition: service_started
+    labels:
+      - 'traefik.enable=true'
+      - 'cloudflare.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'cloudflare.service=http://pterodactyl-app:80'
+      - 'cloudflare.hostname=pterodactyl.${CLOUDFLARE_ZONE_NAME:-}'
+      - 'traefik.http.routers.pterodactyl-app.entrypoints=http'
+      - 'traefik.http.routers.pterodactyl-app-secure.tls=true'
+      - 'traefik.http.routers.pterodactyl-app.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.middlewares.pterodactyl-app-https-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.routers.pterodactyl-app.middlewares=pterodactyl-app-https-redirect'
+      - 'traefik.http.routers.pterodactyl-app-secure.entrypoints=https'
+      - 'traefik.http.routers.pterodactyl-app-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.routers.pterodactyl-app-secure.tls.certresolver=cloudflare'
+      - 'traefik.http.routers.pterodactyl-app-secure.service=pterodactyl-app'
+      - 'traefik.http.services.pterodactyl-app.loadbalancer.server.port=80'
 
   pterodactyl-db:
     image: mariadb:latest
@@ -66,6 +86,7 @@ services:
       MARIADB_USER: ${DB_USER_NAME:-pterodactyl}
       MARIADB_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
       MARIADB_ROOT_PASSWORD: ${DB_ADMIN_PASS:-changeme_admin_password}
+      CONTAINER_NAME: pterodactyl-db
     volumes:
       - ./volumes/data/db/mariadb/pterodactyl:/var/lib/mysql
     healthcheck:
@@ -82,6 +103,8 @@ services:
     logging: *default-logging
     networks:
       - pterodactyl
+    environment:
+      CONTAINER_NAME: pterodactyl-redis
     volumes:
       - ./volumes/data/db/redis/pterodactyl:/data
 
@@ -89,3 +112,7 @@ networks:
   pterodactyl:
     name: pterodactyl
     external: false
+  proxy:
+    external: true
+  cloudflare:
+    external: true
